@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NPK Advisor">
+<meta name="theme-color" content="#1a4731">
+<title>Bahamas Soil Nutrient Advisor</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+/* ── RESET & BASE ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --green-dark: #1a4731;
+  --green-mid: #2d6a4f;
+  --green-light: #a7f3d0;
+  --green-pale: #f0fdf4;
+  --amber: #f59e0b;
+  --amber-pale: #fffbeb;
+  --red: #ef4444;
+  --red-pale: #fef2f2;
+  --blue: #0ea5e9;
+  --purple: #8b5cf6;
+  --grey-dark: #1e293b;
+  --grey-mid: #64748b;
+  --grey-light: #94a3b8;
+  --border: #e2e8f0;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html { height: 100%; overflow: hidden; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f1f5f9;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--grey-dark);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── TOP BAR ── */
+.topbar {
+  background: linear-gradient(135deg, var(--green-dark) 0%, var(--green-mid) 100%);
+  padding: calc(var(--safe-top) + 12px) 16px 12px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.topbar-emoji { font-size: 22px; }
+.topbar-title { font-size: 16px; font-weight: 700; color: #fff; line-height: 1.1; }
+.topbar-sub   { font-size: 11px; color: var(--green-light); }
+.topbar-info  { margin-left: auto; background: rgba(255,255,255,0.12); border: none; border-radius: 99px; color: #fff; width: 32px; height: 32px; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+/* ── MAIN SCROLL AREA ── */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ── INPUT SCREEN ── */
+.input-screen { padding: 16px; }
+.section-head {
+  font-size: 12px; font-weight: 700; color: var(--grey-mid);
+  text-transform: uppercase; letter-spacing: 0.07em;
+  margin-bottom: 10px; margin-top: 18px;
+}
+.section-head:first-child { margin-top: 0; }
+
+.input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+.input-card {
+  background: #fff; border-radius: 14px; padding: 14px;
+  border: 2px solid var(--border); transition: border-color 0.15s;
+}
+.input-card.filled { border-color: var(--active-color, var(--green-mid)); }
+.input-label { font-size: 11px; font-weight: 700; color: var(--grey-mid); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+.input-wrap { position: relative; }
+.input-wrap input {
+  width: 100%; border: none; outline: none; background: transparent;
+  font-size: 24px; font-weight: 700; color: var(--active-color, var(--grey-dark));
+  font-family: inherit; padding: 0;
+  -moz-appearance: textfield;
+}
+.input-wrap input::-webkit-outer-spin-button,
+.input-wrap input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.input-unit { font-size: 11px; color: var(--grey-light); font-weight: 600; margin-top: 2px; }
+.input-hint { font-size: 10px; color: var(--grey-light); margin-top: 3px; line-height: 1.4; }
+
+.btn-clear-all {
+  width: 100%; padding: 12px; border-radius: 12px; border: 1.5px solid var(--border);
+  background: #fff; font-size: 13px; color: var(--grey-mid); cursor: pointer;
+  font-family: inherit; margin-top: 16px;
+}
+
+/* ── ALERT BANNERS ── */
+.alerts { padding: 0 16px; }
+.alert-banner {
+  border-radius: 12px; padding: 12px 14px; margin-bottom: 10px;
+  border-left: 4px solid; font-size: 12px; line-height: 1.6;
+}
+.alert-banner strong { display: block; font-weight: 700; margin-bottom: 3px; font-size: 12px; }
+
+/* ── RESULTS SCREEN ── */
+.results-screen { padding: 12px 16px 16px; }
+
+/* ── SUMMARY ROW ── */
+.summary-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.sum-tile {
+  flex: 1; border-radius: 12px; padding: 10px 8px; text-align: center;
+  border: 1.5px solid;
+}
+.sum-count { font-size: 22px; font-weight: 800; line-height: 1; }
+.sum-label { font-size: 10px; color: var(--grey-mid); margin-top: 2px; line-height: 1.2; }
+
+/* ── FILTER CHIPS ── */
+.filter-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 2px; }
+.filter-bar::-webkit-scrollbar { display: none; }
+.chip {
+  padding: 6px 14px; border-radius: 99px; font-size: 12px; white-space: nowrap;
+  border: 1.5px solid var(--border); background: #fff; color: var(--grey-dark);
+  cursor: pointer; flex-shrink: 0; font-family: inherit;
+}
+.chip.active { background: var(--green-dark); color: #fff; border-color: var(--green-dark); font-weight: 700; }
+
+/* ── SEARCH ── */
+.search-wrap { position: relative; margin-bottom: 12px; }
+.search-wrap input {
+  width: 100%; padding: 10px 14px 10px 36px;
+  border-radius: 12px; border: 1.5px solid var(--border);
+  font-size: 14px; outline: none; background: #fff; font-family: inherit;
+}
+.search-wrap input:focus { border-color: var(--green-mid); }
+.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 15px; color: var(--grey-light); pointer-events: none; }
+
+/* ── CROP CARDS ── */
+.crop-card {
+  background: #fff; border-radius: 16px; padding: 14px 16px;
+  border: 1.5px solid var(--border); margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  transition: border-color 0.2s;
+}
+.card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.card-emoji { font-size: 28px; }
+.card-title { font-weight: 700; font-size: 15px; }
+.card-cat { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; margin-top: 1px; }
+.card-badge { margin-left: auto; font-size: 11px; font-weight: 700; border: 1.5px solid; border-radius: 99px; padding: 4px 10px; white-space: nowrap; flex-shrink: 0; }
+
+/* ── PARAM PILLS (5 per card) ── */
+.param-row { display: flex; gap: 5px; margin-bottom: 10px; }
+.ppill {
+  flex: 1; border-radius: 9px; padding: 7px 5px; border: 1.5px solid;
+  text-align: center; min-width: 0;
+}
+.ppill-ltr { font-size: 10px; font-weight: 700; color: var(--grey-mid); text-transform: uppercase; }
+.ppill-icon { font-size: 12px; font-weight: 700; margin: 1px 0; }
+.ppill-val { font-size: 9px; color: var(--grey-mid); line-height: 1.3; }
+
+/* ── RECS ── */
+.recs-box { border-radius: 9px; padding: 9px 11px; margin-bottom: 8px; }
+.rec { font-size: 11.5px; color: #374151; line-height: 1.55; padding-left: 12px; position: relative; margin-bottom: 3px; }
+.rec:last-child { margin-bottom: 0; }
+.rec-arr { position: absolute; left: 0; font-weight: 700; }
+.card-note { font-size: 10.5px; color: var(--grey-light); line-height: 1.5; border-top: 1px solid #f1f5f9; padding-top: 7px; font-style: italic; }
+
+/* ── CARD ALERT ── */
+.c-alert { font-size: 11px; border-radius: 7px; padding: 7px 10px; margin-bottom: 8px; line-height: 1.5; border-left: 3px solid; }
+
+/* ── EMPTY/PROMPT ── */
+.prompt { text-align: center; padding: 48px 24px 32px; color: var(--grey-light); font-size: 14px; line-height: 1.6; }
+.prompt-emoji { font-size: 48px; display: block; margin-bottom: 12px; }
+
+/* ── BOTTOM NAV ── */
+.bottomnav {
+  background: #fff; border-top: 1px solid var(--border);
+  display: flex; flex-shrink: 0;
+  padding-bottom: var(--safe-bottom);
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+}
+.nav-btn {
+  flex: 1; padding: 10px 0; border: none; background: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font-family: inherit; color: var(--grey-light);
+}
+.nav-btn.active { color: var(--green-dark); }
+.nav-icon { font-size: 20px; }
+.nav-label { font-size: 10px; font-weight: 600; }
+
+/* ── ABOUT SCREEN ── */
+.about-screen { padding: 20px 16px; }
+.about-hero { background: linear-gradient(135deg, var(--green-dark), var(--green-mid)); border-radius: 16px; padding: 20px; margin-bottom: 20px; color: #fff; text-align: center; }
+.about-hero h2 { font-size: 18px; margin-bottom: 6px; }
+.about-hero p  { font-size: 12px; color: var(--green-light); line-height: 1.5; }
+.about-section { background: #fff; border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); }
+.about-section h3 { font-size: 13px; font-weight: 700; color: var(--green-dark); margin-bottom: 8px; }
+.about-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; gap: 10px; }
+.about-row:last-child { border-bottom: none; }
+.about-key { color: var(--grey-mid); flex-shrink: 0; }
+.about-val { color: var(--grey-dark); text-align: right; font-weight: 500; }
+
+/* ── INSTALL BANNER ── */
+.install-bar {
+  background: var(--green-dark); color: #fff;
+  padding: 10px 16px; display: flex; align-items: center; gap: 10px;
+  font-size: 12px; flex-shrink: 0; display: none;
+}
+.install-bar.show { display: flex; }
+.install-text { flex: 1; line-height: 1.4; }
+.install-text strong { display: block; font-size: 13px; }
+.btn-install { background: rgba(255,255,255,0.2); border: 1.5px solid rgba(255,255,255,0.4); color: #fff; border-radius: 99px; padding: 6px 14px; font-size: 12px; cursor: pointer; white-space: nowrap; font-family: inherit; flex-shrink: 0; }
+.btn-dismiss { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 18px; cursor: pointer; padding: 0 4px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<!-- Install prompt banner -->
+<div class="install-bar" id="install-bar">
+  <span class="install-text">
+    <strong>Install this app</strong>
+    Add to your home screen for offline use
+  </span>
+  <button class="btn-install" id="btn-install">Install</button>
+  <button class="btn-dismiss" id="btn-dismiss">✕</button>
+</div>
+
+<!-- Top bar -->
+<div class="topbar">
+  <span class="topbar-emoji">🌱</span>
+  <div>
+    <div class="topbar-title">Soil Nutrient Advisor</div>
+    <div class="topbar-sub">Bahamas · N · P · K · pH · EC</div>
+  </div>
+  <button class="topbar-info" onclick="showScreen('about')" aria-label="About">ℹ</button>
+</div>
+
+<!-- Main scrollable area -->
+<div class="main" id="main">
+
+  <!-- ── INPUT SCREEN ── -->
+  <div class="screen active" id="screen-input">
+    <div class="input-screen">
+      <div class="section-head">Soil Nutrients</div>
+      <div class="input-grid">
+        <div class="input-card" id="card-n" style="--active-color:#16a34a">
+          <div class="input-label">Nitrogen (N)</div>
+          <div class="input-wrap">
+            <input type="number" id="inp-n" min="0" max="999" step="1" inputmode="decimal" placeholder="—" oninput="onInput('n')">
+          </div>
+          <div class="input-unit">ppm NO₃-N</div>
+          <div class="input-hint">1:5 extract ×5 · Horiba NO3-11S</div>
+        </div>
+        <div class="input-card" id="card-p" style="--active-color:#d97706">
+          <div class="input-label">Phosphorus (P)</div>
+          <div class="input-wrap">
+            <input type="number" id="inp-p" min="0" max="999" step="1" inputmode="decimal" placeholder="—" oninput="onInput('p')">
+          </div>
+          <div class="input-unit">ppm Mehlich-3 P</div>
+          <div class="input-hint">Molybdenum blue method</div>
+        </div>
+        <div class="input-card" id="card-k" style="--active-color:#7c3aed">
+          <div class="input-label">Potassium (K)</div>
+          <div class="input-wrap">
+            <input type="number" id="inp-k" min="0" max="999" step="1" inputmode="decimal" placeholder="—" oninput="onInput('k')">
+          </div>
+          <div class="input-unit">ppm K⁺</div>
+          <div class="input-hint">1:5 extract ×5 · Horiba K-11</div>
+        </div>
+        <div class="input-card" id="card-ph" style="--active-color:#0284c7">
+          <div class="input-label">Soil pH</div>
+          <div class="input-wrap">
+            <input type="number" id="inp-ph" min="3" max="10" step="0.1" inputmode="decimal" placeholder="—" oninput="onInput('ph')">
+          </div>
+          <div class="input-unit">pH units</div>
+          <div class="input-hint">Horiba pH-11 · 1:2.5 suspension</div>
+        </div>
+      </div>
+      <div class="input-grid" style="grid-template-columns:1fr;">
+        <div class="input-card" id="card-ec" style="--active-color:#dc2626">
+          <div class="input-label">Salinity (EC)</div>
+          <div class="input-wrap">
+            <input type="number" id="inp-ec" min="0" max="20" step="0.01" inputmode="decimal" placeholder="—" oninput="onInput('ec')">
+          </div>
+          <div class="input-unit">dS/m · Apera PC60 in 1:5 extract</div>
+          <div class="input-hint">OK &lt;0.35 · Caution 0.35–0.75 · Alert &gt;2.0 (dilute ISE)</div>
+        </div>
+      </div>
+      <button class="btn-clear-all" onclick="clearAll()">✕ Clear all values</button>
+    </div>
+  </div>
+
+  <!-- ── RESULTS SCREEN ── -->
+  <div class="screen" id="screen-results">
+    <div class="results-screen">
+      <div id="summary-row" class="summary-row" style="display:none"></div>
+      <div class="filter-bar" id="filter-bar">
+        <button class="chip active" id="chip-all"   onclick="setFilter('all')">All Crops</button>
+        <button class="chip"        id="chip-veg"   onclick="setFilter('veg')">Vegetables</button>
+        <button class="chip"        id="chip-fruit" onclick="setFilter('fruit')">Fruit / Trees</button>
+      </div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search" placeholder="Search crops…" oninput="renderCards()">
+      </div>
+      <div id="alerts"></div>
+      <div id="cards"></div>
+    </div>
+  </div>
+
+  <!-- ── ABOUT SCREEN ── -->
+  <div class="screen" id="screen-about">
+    <div class="about-screen">
+      <div class="about-hero">
+        <div style="font-size:40px;margin-bottom:8px">🌱</div>
+        <h2>Bahamas Soil Nutrient Advisor</h2>
+        <p>Enter soil test values to see crop suitability and fertiliser recommendations for 25 crops grown in the Bahamas.</p>
+      </div>
+      <div class="about-section">
+        <h3>Instruments &amp; Methods</h3>
+        <div class="about-row"><span class="about-key">Nitrogen</span><span class="about-val">Horiba LAQUAtwin NO3-11S · 1:5 extract ×5</span></div>
+        <div class="about-row"><span class="about-key">Phosphorus</span><span class="about-val">Mehlich-3 · Molybdenum blue</span></div>
+        <div class="about-row"><span class="about-key">Potassium</span><span class="about-val">Horiba LAQUAtwin K-11 · 1:5 extract ×5</span></div>
+        <div class="about-row"><span class="about-key">Soil pH</span><span class="about-val">Horiba pH-11 · 1:2.5 suspension</span></div>
+        <div class="about-row"><span class="about-key">Soil EC</span><span class="about-val">Apera PC60 · 1:5 extract</span></div>
+        <div class="about-row"><span class="about-key">Water quality</span><span class="about-val">Apera PC60 · direct immersion</span></div>
+      </div>
+      <div class="about-section">
+        <h3>Crops Covered</h3>
+        <div class="about-row"><span class="about-key">Vegetables (15)</span><span class="about-val">Tomato, Pepper, Okra, Cabbage, Onion, Sweet Potato, Cassava, Pumpkin, Watermelon, Melon, Cucumber, Corn, Pigeon Peas, Plantain, Pigeon Peas</span></div>
+        <div class="about-row"><span class="about-key">Fruit / Trees (10)</span><span class="about-val">Avocado, Banana, Mango, Papaya, Pineapple, Grapefruit, Lime, Orange, Coconut, Scarlet Plum</span></div>
+      </div>
+      <div class="about-section">
+        <h3>Sources</h3>
+        <div class="about-row"><span class="about-key">NPK thresholds</span><span class="about-val">UF-IFAS, OSU Extension, Cornell University, FAO crop guides</span></div>
+        <div class="about-row"><span class="about-key">pH ranges</span><span class="about-val">Standard horticultural references · Caribbean extension</span></div>
+        <div class="about-row"><span class="about-key">EC tolerance</span><span class="about-val">FAO Irrigation Paper No. 29 · 1:5 extract conversion</span></div>
+        <div class="about-row"><span class="about-key">Crops list</span><span class="about-val">Bahamas Dept. of Agriculture · CARDI · Bahamas Food Guide</span></div>
+      </div>
+      <div class="about-section">
+        <h3>Offline Use</h3>
+        <p style="font-size:12px;color:var(--grey-mid);line-height:1.6">This app works fully offline after first load. All crop data and thresholds are stored on your device — no internet connection required in the field.</p>
+      </div>
+      <div style="text-align:center;padding:16px 0;font-size:11px;color:var(--grey-light)">
+        Consult the Bahamas Department of Agriculture for crop-specific local recommendations. These are indicative thresholds.
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- Bottom navigation -->
+<div class="bottomnav">
+  <button class="nav-btn active" id="nav-input" onclick="showScreen('input')">
+    <span class="nav-icon">📋</span>
+    <span class="nav-label">Soil Data</span>
+  </button>
+  <button class="nav-btn" id="nav-results" onclick="showScreen('results')">
+    <span class="nav-icon">🌿</span>
+    <span class="nav-label">Crops</span>
+  </button>
+  <button class="nav-btn" id="nav-about" onclick="showScreen('about')">
+    <span class="nav-icon">ℹ️</span>
+    <span class="nav-label">About</span>
+  </button>
+</div>
+
+<script>
+// ── CROP DATA ──────────────────────────────────────────────────────────────
+const CROPS = [
+  {id:"tomato",      name:"Tomato",            emoji:"🍅", cat:"veg",
+   n:{low:20,ok:60}, p:{low:10,ok:25}, k:{low:80,ok:160},
+   ph:{min:6.0,max:7.0}, ec:"sensitive",
+   notes:"Heavy feeder. Split N at planting and fruit set. High K for colour/shelf life. Sensitive to salinity and strong alkalinity."},
+  {id:"sweet_pepper",name:"Sweet Pepper",      emoji:"🫑", cat:"veg",
+   n:{low:20,ok:55}, p:{low:10,ok:20}, k:{low:80,ok:150},
+   ph:{min:6.0,max:7.0}, ec:"sensitive",
+   notes:"Excess N reduces fruit set. Adequate K improves wall thickness. Avoid brackish water."},
+  {id:"hot_pepper",  name:"Hot Pepper",        emoji:"🌶️", cat:"veg",
+   n:{low:15,ok:45}, p:{low:8,ok:18},  k:{low:80,ok:130},
+   ph:{min:6.0,max:7.0}, ec:"sensitive",
+   notes:"More drought-tolerant than sweet pepper. Capsaicin may be reduced by excess N or salinity."},
+  {id:"okra",        name:"Okra",              emoji:"🌿", cat:"veg",
+   n:{low:15,ok:45}, p:{low:8,ok:18},  k:{low:60,ok:120},
+   ph:{min:6.0,max:7.5}, ec:"moderate",
+   notes:"Tolerates poor soils and moderate salinity. Excess N promotes foliage over pods."},
+  {id:"cabbage",     name:"Cabbage",           emoji:"🥬", cat:"veg",
+   n:{low:25,ok:65}, p:{low:10,ok:22}, k:{low:80,ok:140},
+   ph:{min:6.0,max:7.0}, ec:"sensitive",
+   notes:"High N for head formation. Half at planting, half at head initiation. K reduces tipburn."},
+  {id:"onion",       name:"Onion",             emoji:"🧅", cat:"veg",
+   n:{low:20,ok:55}, p:{low:10,ok:20}, k:{low:100,ok:160},
+   ph:{min:6.0,max:7.0}, ec:"sensitive",
+   notes:"High K for bulb development. Reduce N once bulbs swell. Among most salt-sensitive crops."},
+  {id:"sweet_potato",name:"Sweet Potato",      emoji:"🍠", cat:"veg",
+   n:{low:10,ok:30}, p:{low:8,ok:18},  k:{low:100,ok:180},
+   ph:{min:5.5,max:6.5}, ec:"moderate",
+   notes:"CAUTION: excess N produces vines but poor roots. Very high K demand. Prefers slightly acid soils."},
+  {id:"cassava",     name:"Cassava",           emoji:"🌾", cat:"veg",
+   n:{low:10,ok:25}, p:{low:5,ok:12},  k:{low:60,ok:110},
+   ph:{min:5.5,max:7.0}, ec:"moderate",
+   notes:"Key resilience crop — tolerates low fertility, moderately acid soils and moderate salinity."},
+  {id:"pumpkin",     name:"Pumpkin / Squash",  emoji:"🎃", cat:"veg",
+   n:{low:20,ok:50}, p:{low:10,ok:20}, k:{low:100,ok:160},
+   ph:{min:6.0,max:7.5}, ec:"moderate",
+   notes:"High K supports fruit set. Avoid N excess after flowering."},
+  {id:"watermelon",  name:"Watermelon",        emoji:"🍉", cat:"veg",
+   n:{low:20,ok:50}, p:{low:8,ok:18},  k:{low:100,ok:175},
+   ph:{min:6.0,max:7.0}, ec:"moderate",
+   notes:"Very high K demand for sugar content. Excess N causes hollow heart."},
+  {id:"cantaloupe",  name:"Cantaloupe / Melon",emoji:"🍈", cat:"veg",
+   n:{low:20,ok:50}, p:{low:8,ok:18},  k:{low:100,ok:160},
+   ph:{min:6.0,max:7.0}, ec:"moderate",
+   notes:"High K supports aroma and sugar. Moderate N — excess delays ripening."},
+  {id:"cucumber",    name:"Cucumber",          emoji:"🥒", cat:"veg",
+   n:{low:20,ok:50}, p:{low:10,ok:20}, k:{low:80,ok:150},
+   ph:{min:6.0,max:7.0}, ec:"sensitive",
+   notes:"K reduces bitterness. Sensitive to salinity."},
+  {id:"corn",        name:"Corn / Maize",      emoji:"🌽", cat:"veg",
+   n:{low:30,ok:70}, p:{low:12,ok:25}, k:{low:80,ok:140},
+   ph:{min:6.0,max:7.0}, ec:"moderate",
+   notes:"Highest N demand of common vegetables. Side-dress N at knee-high. Split applications essential."},
+  {id:"pigeon_peas", name:"Pigeon Peas",       emoji:"🫘", cat:"veg",
+   n:{low:5,ok:15},  p:{low:8,ok:18},  k:{low:60,ok:110},
+   ph:{min:5.5,max:7.0}, ec:"moderate",
+   notes:"Legume — fixes atmospheric N. Inoculate with Rhizobium in new fields. Tolerates poor soils."},
+  {id:"plantain",    name:"Plantain",          emoji:"🍌", cat:"veg",
+   n:{low:30,ok:75}, p:{low:10,ok:20}, k:{low:160,ok:230},
+   ph:{min:5.5,max:7.0}, ec:"moderate",
+   notes:"One of the highest K-demanding crops. K controls bunch weight directly."},
+  {id:"avocado",     name:"Avocado",           emoji:"🥑", cat:"fruit",
+   n:{low:15,ok:40}, p:{low:5,ok:12},  k:{low:80,ok:140},
+   ph:{min:6.0,max:7.0}, ec:"sensitive",
+   notes:"Excess N promotes vegetative growth over fruiting. Sensitive to high pH and salinity."},
+  {id:"banana",      name:"Banana",            emoji:"🍌", cat:"fruit",
+   n:{low:30,ok:80}, p:{low:10,ok:20}, k:{low:180,ok:250},
+   ph:{min:5.5,max:7.0}, ec:"moderate",
+   notes:"Highest K demand of any tropical crop. Sensitive to strong alkalinity."},
+  {id:"mango",       name:"Mango",             emoji:"🥭", cat:"fruit",
+   n:{low:10,ok:30}, p:{low:5,ok:12},  k:{low:60,ok:120},
+   ph:{min:5.5,max:7.5}, ec:"moderate",
+   notes:"Excess N suppresses flowering. Adaptable across wide pH range."},
+  {id:"papaya",      name:"Papaya",            emoji:"🍑", cat:"fruit",
+   n:{low:30,ok:70}, p:{low:12,ok:22}, k:{low:100,ok:180},
+   ph:{min:6.0,max:7.0}, ec:"sensitive",
+   notes:"Fast-growing, high feeder. Sensitive to salinity and waterlogging."},
+  {id:"pineapple",   name:"Pineapple",         emoji:"🍍", cat:"fruit",
+   n:{low:20,ok:55}, p:{low:5,ok:12},  k:{low:80,ok:150},
+   ph:{min:4.5,max:6.5}, ec:"moderate",
+   notes:"The famous Eleuthera pineapple. Acid-tolerant. High pH causes iron deficiency."},
+  {id:"grapefruit",  name:"Grapefruit",        emoji:"🍊", cat:"fruit",
+   n:{low:15,ok:40}, p:{low:5,ok:12},  k:{low:80,ok:130},
+   ph:{min:6.0,max:7.5}, ec:"moderate",
+   notes:"Bahamas' most valuable export crop. Excess N reduces fruit colour. K supports juice content."},
+  {id:"lime",        name:"Lime (Persian)",    emoji:"🍋", cat:"fruit",
+   n:{low:15,ok:40}, p:{low:5,ok:12},  k:{low:80,ok:130},
+   ph:{min:6.0,max:7.5}, ec:"moderate",
+   notes:"Major export from Grand Bahama and Abaco. Highly tolerant of calcareous soils."},
+  {id:"orange",      name:"Orange",            emoji:"🍊", cat:"fruit",
+   n:{low:15,ok:40}, p:{low:5,ok:12},  k:{low:80,ok:130},
+   ph:{min:6.0,max:7.5}, ec:"moderate",
+   notes:"Moderate feeder. Split N 2–3 times per year. K critical for juice content."},
+  {id:"coconut",     name:"Coconut",           emoji:"🥥", cat:"fruit",
+   n:{low:10,ok:30}, p:{low:5,ok:10},  k:{low:100,ok:160},
+   ph:{min:5.5,max:8.0}, ec:"tolerant",
+   notes:"Most salt-tolerant crop — thrives on coastal Bahamian soils. Very wide pH tolerance."},
+  {id:"scarlet_plum",name:"Scarlet Plum",      emoji:"🍒", cat:"fruit",
+   n:{low:10,ok:25}, p:{low:5,ok:12},  k:{low:60,ok:120},
+   ph:{min:5.5,max:7.5}, ec:"moderate",
+   notes:"Native Bahamian fruit (Jamaican cherry). Low input requirements, wide pH tolerance."},
+];
+
+const EC_THRESH = {
+  sensitive: {caution:0.35, problem:0.60},
+  moderate:  {caution:0.60, problem:1.00},
+  tolerant:  {caution:1.00, problem:1.60},
+};
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let currentScreen = 'input';
+let filterCat = 'all';
+
+function v(id) { return document.getElementById(id).value.trim(); }
+function n(id) { const x=v(id); return x===''?null:Number(x); }
+function hasValues() { return ['inp-n','inp-p','inp-k','inp-ph','inp-ec'].some(id=>v(id)!==''); }
+
+// ── STATUS LOGIC ──────────────────────────────────────────────────────────
+const ST = {
+  good:     {c:'#22c55e', bg:'#f0fdf4', bo:'#86efac', ic:'✓'},
+  marginal: {c:'#f59e0b', bg:'#fffbeb', bo:'#fcd34d', ic:'▲'},
+  deficient:{c:'#ef4444', bg:'#fef2f2', bo:'#fca5a5', ic:'✕'},
+  empty:    {c:'#94a3b8', bg:'#f8fafc', bo:'#e2e8f0', ic:'·'},
+};
+
+function npkSt(val,low,ok) {
+  if(val===null) return 'empty';
+  return val>=ok?'good':val>=low?'marginal':'deficient';
+}
+function phSt(val,crop) {
+  if(val===null) return 'empty';
+  const {min,max}=crop.ph;
+  if(val>=min&&val<=max) return 'good';
+  if(val>=min-0.5&&val<=max+0.5) return 'marginal';
+  return 'deficient';
+}
+function ecSt(val,crop) {
+  if(val===null) return 'empty';
+  const t=EC_THRESH[crop.ec];
+  return val>=t.problem?'deficient':val>=t.caution?'marginal':'good';
+}
+function overallSt(crop,nv,pv,kv,phv,ecv) {
+  const ss=[npkSt(nv,crop.n.low,crop.n.ok),npkSt(pv,crop.p.low,crop.p.ok),
+            npkSt(kv,crop.k.low,crop.k.ok),phSt(phv,crop),ecSt(ecv,crop)]
+    .filter(s=>s!=='empty');
+  if(!ss.length) return 'empty';
+  if(ss.includes('deficient')) return 'deficient';
+  if(ss.includes('marginal'))  return 'marginal';
+  return 'good';
+}
+
+// ── INPUT HANDLERS ─────────────────────────────────────────────────────────
+function onInput(field) {
+  const map = {n:'card-n',p:'card-p',k:'card-k',ph:'card-ph',ec:'card-ec'};
+  const card = document.getElementById(map[field]);
+  const input = document.getElementById('inp-'+field);
+  card.classList.toggle('filled', input.value.trim() !== '');
+  if(hasValues()) renderCards();
+}
+
+function clearAll() {
+  ['inp-n','inp-p','inp-k','inp-ph','inp-ec'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  ['card-n','card-p','card-k','card-ph','card-ec'].forEach(id => {
+    document.getElementById(id).classList.remove('filled');
+  });
+  document.getElementById('cards').innerHTML = '';
+  document.getElementById('alerts').innerHTML = '';
+  const sr = document.getElementById('summary-row');
+  sr.style.display='none'; sr.innerHTML='';
+}
+
+// ── NAVIGATION ─────────────────────────────────────────────────────────────
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  const nb = document.getElementById('nav-'+name);
+  if(nb) nb.classList.add('active');
+  document.getElementById('main').scrollTop = 0;
+  currentScreen = name;
+  if(name==='results') renderCards();
+}
+
+function setFilter(cat) {
+  filterCat = cat;
+  ['all','veg','fruit'].forEach(c =>
+    document.getElementById('chip-'+c).classList.toggle('active', c===cat)
+  );
+  renderCards();
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+function renderCards() {
+  const nv=n('inp-n'), pv=n('inp-p'), kv=n('inp-k'), phv=n('inp-ph'), ecv=n('inp-ec');
+  const search=document.getElementById('search').value.toLowerCase();
+
+  // Alerts
+  let aHTML='';
+  if(phv!==null && phv>7.5)
+    aHTML+=`<div class="alert-banner" style="background:#fffbeb;border-color:#f59e0b;color:#92400e">
+      <strong>⚠ High pH (${phv.toFixed(1)}) — Micronutrient Lockup</strong>
+      On calcareous Bahamian limestone above pH 7.5, iron, manganese and zinc become chemically unavailable.
+      Symptoms appear as yellowing between leaf veins on young leaves. Consider foliar micronutrient sprays.
+    </div>`;
+  else if(phv!==null && phv<5.5)
+    aHTML+=`<div class="alert-banner" style="background:#fef2f2;border-color:#ef4444;color:#991b1b">
+      <strong>⚠ Low pH (${phv.toFixed(1)}) — Al/Mn Toxicity Risk</strong>
+      Below pH 5.5, aluminium and manganese become toxic to most crops. Apply lime to raise pH to 6.0–6.5.
+    </div>`;
+  if(ecv!==null && ecv>0.75) {
+    const lbl=ecv>4.0?'Severe':ecv>2.0?'High':'Moderate';
+    const msg=ecv>2.0?'Most vegetable crops will experience significant yield reduction.':'Monitor sensitive crops carefully.';
+    if(ecv>2.0) aHTML+=`<div class="alert-banner" style="background:#fef2f2;border-color:#ef4444;color:#991b1b">
+      <strong>⚠ ${lbl} Salinity (EC ${ecv.toFixed(2)} dS/m)</strong>
+      ${msg}${ecv>2.0?' Dilute 1:5 extract 1:2 before Horiba ISE readings.':''} Re-test seasonally.
+    </div>`;
+    else aHTML+=`<div class="alert-banner" style="background:#fffbeb;border-color:#f59e0b;color:#92400e">
+      <strong>⚠ ${lbl} Salinity (EC ${ecv.toFixed(2)} dS/m)</strong>
+      ${msg} Re-test seasonally — values rise in dry season.
+    </div>`;
+  }
+  document.getElementById('alerts').innerHTML = aHTML;
+
+  // Summary
+  const sr = document.getElementById('summary-row');
+  if(hasValues()) {
+    const all = CROPS.filter(c=>(filterCat==='all'||c.cat===filterCat)&&c.name.toLowerCase().includes(search));
+    const good=all.filter(c=>overallSt(c,nv,pv,kv,phv,ecv)==='good').length;
+    const mar =all.filter(c=>overallSt(c,nv,pv,kv,phv,ecv)==='marginal').length;
+    const def =all.filter(c=>overallSt(c,nv,pv,kv,phv,ecv)==='deficient').length;
+    sr.style.display='flex';
+    sr.innerHTML=[
+      {l:'Ready',    v:good, c:'#22c55e',bg:'#f0fdf4'},
+      {l:'Monitor',  v:mar,  c:'#f59e0b',bg:'#fffbeb'},
+      {l:'Act Now',  v:def,  c:'#ef4444',bg:'#fef2f2'},
+    ].map(({l,v,c,bg})=>
+      `<div class="sum-tile" style="background:${bg};border-color:${c}44">
+        <div class="sum-count" style="color:${c}">${v}</div>
+        <div class="sum-label">${l}</div>
+      </div>`
+    ).join('');
+  } else { sr.style.display='none'; sr.innerHTML=''; }
+
+  // Cards
+  let filtered = CROPS.filter(c=>(filterCat==='all'||c.cat===filterCat)&&c.name.toLowerCase().includes(search));
+  const rank={deficient:0,marginal:1,good:2,empty:3};
+  if(hasValues()) filtered.sort((a,b)=>rank[overallSt(a,nv,pv,kv,phv,ecv)]-rank[overallSt(b,nv,pv,kv,phv,ecv)]);
+
+  const cardsEl = document.getElementById('cards');
+  if(!hasValues()) {
+    cardsEl.innerHTML=`<div class="prompt">
+      <span class="prompt-emoji">📋</span>
+      Enter your soil test results on the Soil&nbsp;Data tab to see crop recommendations.
+    </div>`; return;
+  }
+  if(!filtered.length) { cardsEl.innerHTML='<div class="prompt">No crops match your search.</div>'; return; }
+  cardsEl.innerHTML = filtered.map(c=>buildCard(c,nv,pv,kv,phv,ecv)).join('');
+}
+
+function buildCard(crop,nv,pv,kv,phv,ecv) {
+  const ns=npkSt(nv,crop.n.low,crop.n.ok);
+  const ps=npkSt(pv,crop.p.low,crop.p.ok);
+  const ks=npkSt(kv,crop.k.low,crop.k.ok);
+  const phs=phSt(phv,crop);
+  const ecs=ecSt(ecv,crop);
+  const ov=overallSt(crop,nv,pv,kv,phv,ecv);
+  const oc=ov==='good'?'#22c55e':ov==='deficient'?'#ef4444':ov==='marginal'?'#f59e0b':'#e2e8f0';
+  const cc=crop.cat==='veg'?'#0ea5e9':'#8b5cf6';
+  const badge=ov==='good'?'✓ Ready':ov==='deficient'?'✕ Act':ov==='marginal'?'▲ Monitor':'—';
+
+  function pp(status,ltr,line1,line2) {
+    const s=ST[status];
+    return `<div class="ppill" style="background:${s.bg};border-color:${s.bo}">
+      <div class="ppill-ltr">${ltr}</div>
+      <div class="ppill-icon" style="color:${s.c}">${s.ic}</div>
+      <div class="ppill-val">${line1}${line2?`<br>${line2}`:''}</div>
+    </div>`;
+  }
+
+  const nPill =pp(ns,'N', nv!==null?`${nv}ppm`:'—', `≥${crop.n.ok}`);
+  const pPill =pp(ps,'P', pv!==null?`${pv}ppm`:'—', `≥${crop.p.ok}`);
+  const kPill =pp(ks,'K', kv!==null?`${kv}ppm`:'—', `≥${crop.k.ok}`);
+  const phPill=pp(phs,'pH',phv!==null?phv.toFixed(1):'—', `${crop.ph.min}–${crop.ph.max}`);
+  const ecT={sensitive:'Sens.',moderate:'Mod.',tolerant:'Tol.'}[crop.ec];
+  const ecPill=pp(ecs,'EC',ecv!==null?`${ecv.toFixed(2)}`:'—', ecT);
+
+  // Card-level pH alert
+  let calert='';
+  if(phv!==null) {
+    if(crop.id==='pineapple'&&phv>6.5)
+      calert=`<div class="c-alert" style="background:#fffbeb;border-color:#f59e0b;color:#92400e">⚠ Pineapple prefers pH 4.5–6.5. Fe deficiency likely at pH ${phv.toFixed(1)}.</div>`;
+    else if(phv>8.0&&!['cassava','okra','pigeon_peas','coconut','lime','grapefruit','orange','mango','scarlet_plum'].includes(crop.id))
+      calert=`<div class="c-alert" style="background:#fef2f2;border-color:#ef4444;color:#991b1b">✕ pH ${phv.toFixed(1)} — P, Fe, Mn, Zn severely limited. Soil amendment required.</div>`;
+    else if(phv>7.5&&['banana','sweet_potato','plantain','papaya','avocado','cucumber'].includes(crop.id))
+      calert=`<div class="c-alert" style="background:#fffbeb;border-color:#f59e0b;color:#92400e">⚠ pH ${phv.toFixed(1)} above optimal. Fe/Mn/Zn may be unavailable — consider foliar sprays.</div>`;
+  }
+
+  // Recs
+  const recs=[];
+  if(ns==='deficient') recs.push('Apply N fertiliser (urea, ammonium sulphate) pre-plant.');
+  else if(ns==='marginal') recs.push('Moderate N top-dressing advisable; monitor crop.');
+  if(ps==='deficient') recs.push('Apply P fertiliser (TSP, superphosphate) pre-plant.');
+  else if(ps==='marginal') recs.push('Modest P application at planting is advisable.');
+  if(ks==='deficient') recs.push('Apply K fertiliser (KCl, potassium sulphate) pre-plant.');
+  else if(ks==='marginal') recs.push('Supplemental K advisable at fruit/tuber development.');
+  if(phs==='deficient'&&phv!==null) {
+    if(phv<crop.ph.min-0.5) recs.push(`pH ${phv.toFixed(1)} too acid — apply lime toward ${crop.ph.min}–${crop.ph.max}.`);
+    else recs.push(`pH ${phv.toFixed(1)} too alkaline — sulfur/ammonium sulphate + organic matter.`);
+  } else if(phs==='marginal'&&phv!==null) {
+    if(phv<crop.ph.min) recs.push(`pH slightly low — light lime application may help.`);
+    else recs.push(`pH slightly high — organic matter additions help buffer.`);
+  }
+  if(ecs==='deficient') recs.push(`EC ${ecv!==null?ecv.toFixed(2):'?'} dS/m exceeds limit for this crop. Leaching irrigation before planting.`);
+  else if(ecs==='marginal') recs.push('EC near tolerance limit. Avoid over-irrigation.');
+  if(ov==='good') recs.push('All parameters adequate. Re-test in 6–12 months.');
+
+  const recsBg=ov==='good'?'#f0fdf4':ov==='deficient'?'#fef2f2':'#fffbeb';
+  const recsHTML=recs.map(r=>`<div class="rec"><span class="rec-arr" style="color:${oc}">›</span>${r}</div>`).join('');
+
+  return `<div class="crop-card" style="border-color:${oc}44">
+    <div class="card-top">
+      <span class="card-emoji">${crop.emoji}</span>
+      <div>
+        <div class="card-title">${crop.name}</div>
+        <div class="card-cat" style="color:${cc}">${crop.cat==='veg'?'Vegetable':'Fruit / Tree'}</div>
+      </div>
+      <div class="card-badge" style="color:${oc};border-color:${oc}">${badge}</div>
+    </div>
+    <div class="param-row">${nPill}${pPill}${kPill}${phPill}${ecPill}</div>
+    ${calert}
+    <div class="recs-box" style="background:${recsBg}">${recsHTML}</div>
+    <div class="card-note">${crop.notes}</div>
+  </div>`;
+}
+
+// ── PWA INSTALL ─────────────────────────────────────────────────────────────
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-bar').classList.add('show');
+});
+document.getElementById('btn-install').addEventListener('click', () => {
+  if(deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => {
+      deferredPrompt = null;
+      document.getElementById('install-bar').classList.remove('show');
+    });
+  }
+});
+document.getElementById('btn-dismiss').addEventListener('click', () => {
+  document.getElementById('install-bar').classList.remove('show');
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-bar').classList.remove('show');
+});
+
+// ── SERVICE WORKER ───────────────────────────────────────────────────────────
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
